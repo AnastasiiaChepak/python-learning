@@ -21,5 +21,12 @@ def test_get_positive_number_invalid_input(monkeypatch, capsys):
     result = get_positive_number("Enter a number: ")
     captured = capsys.readouterr()
     assert "Please enter a valid number." in captured.out
-    assert result == 100    
-   
+    assert result == 100
+
+def test_get_positive_number_zero_input(monkeypatch, capsys):
+    inputs = iter(["0", "100"])
+    monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+    result = get_positive_number("Enter a number: ")
+    captured = capsys.readouterr()
+    assert "Number must be greater than 0." in captured.out
+    assert result == 100
