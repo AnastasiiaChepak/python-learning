@@ -1,12 +1,13 @@
-import pytest
 import runpy
+from unittest.mock import Mock
+
+import pytest
+
+from finance_calculator import calculate_remaining, get_positive_number
 
 @pytest.fixture
 def input_values(request):
     return iter(request.param)
-
-from finance_calculator import calculate_remaining, get_positive_number
-from unittest.mock import Mock
 
 @pytest.mark.parametrize(
     "salary, expenses, expected",
@@ -26,50 +27,38 @@ def test_calculate_remaining(salary, expenses, expected):
     assert result == expected
 
 @pytest.mark.parametrize(
-    "input_values",
-    [["abc", "100"]],
-    indirect=True,
+    "input_values, expected_message",
+    [
+        (["abc", "100"], "Please enter a valid number."),
+        (["0", "100"], "Number must be greater than 0."),
+        (["-100", "100"], "Number must be greater than 0."),
+    ],
+    indirect=["input_values"],
 )
-def test_get_positive_number_invalid_input(monkeypatch, capsys, input_values):
+def test_get_positive_number_invalid_inputs(
+    monkeypatch,
+    capsys,
+    input_values,
+    expected_message,
+):
     monkeypatch.setattr("builtins.input", lambda _: next(input_values))
 
     result = get_positive_number("Enter a number: ")
     captured = capsys.readouterr()
 
-    assert "Please enter a valid number." in captured.out
-    assert result == 100
+    assert expected_message in captured.out
+    assert result == 100   
 
 @pytest.mark.parametrize(
-    "input_values",
-    [["0", "100"]],
-    indirect=True,
+    "salary, expenses",
+    [
+        (2500, "800"),
+        ("2500", 800),
+    ],
 )
-def test_get_positive_number_zero_input(monkeypatch, capsys, input_values):
-    monkeypatch.setattr("builtins.input", lambda _: next(input_values))
-    result = get_positive_number("Enter a number: ")
-    captured = capsys.readouterr()
-    assert "Number must be greater than 0." in captured.out
-    assert result == 100
-
-@pytest.mark.parametrize(
-    "input_values",
-    [["-100", "100"]],
-    indirect=True,
-)
-def test_get_positive_number_negative_input(monkeypatch, capsys, input_values):
-    monkeypatch.setattr("builtins.input", lambda _: next(input_values))
-    result = get_positive_number("Enter a number: ")
-    captured = capsys.readouterr()
-    assert "Number must be greater than 0." in captured.out
-    assert result == 100    
-
-def test_calculate_remaining_invalid_type():
+def test_calculate_remaining_invalid_type(salary, expenses):
     with pytest.raises(TypeError):
-        calculate_remaining(2500, "800")
-
-def test_calculate_remaining_invalid_salary_type():
-    with pytest.raises(TypeError):
-        calculate_remaining("2500", 800)
+        calculate_remaining(salary, expenses)
 
 def test_get_positive_number_decimal_input(monkeypatch, capsys):
     inputs = iter(["100.5", "100"])
@@ -97,24 +86,20 @@ def test_get_positive_number_multiple_invalid_inputs(monkeypatch, capsys):
     assert captured.out.count("Number must be greater than 0.") == 2
     assert result == 100
 
-def test_main_positive_remaining(monkeypatch, capsys):
-    inputs = iter(["2500", "800"])
-    monkeypatch.setattr("builtins.input", lambda _: next(inputs))
-    runpy.run_path("finance_calculator.py", run_name="__main__")
-    captured = capsys.readouterr()
-    assert "You can save money." in captured.out
+@pytest.mark.parametrize(
+    "input_values, expected_message",
+    [
+        (["2500", "800"], "You can save money."),
+        (["2500", "2500"], "Your income and expenses are equal."),
+        (["2500", "3000"], "You are spending more than you earn."),
+    ],
+    indirect=["input_values"],
+)
+def test_main(input_values, expected_message, monkeypatch, capsys):
+    monkeypatch.setattr("builtins.input", lambda _: next(input_values))
 
-def test_main_zero_remaining(monkeypatch, capsys):
-    inputs = iter(["2500", "2500"])
-    monkeypatch.setattr("builtins.input", lambda _: next(inputs))
     runpy.run_path("finance_calculator.py", run_name="__main__")
-    captured = capsys.readouterr()
-    assert "Your income and expenses are equal." in captured.out        
 
-def test_main_negative_remaining(monkeypatch, capsys):
-    inputs = iter(["2500", "3000"])
-    monkeypatch.setattr("builtins.input", lambda _: next(inputs))
-    runpy.run_path("finance_calculator.py", run_name="__main__")
     captured = capsys.readouterr()
-    assert "You are spending more than you earn." in captured.out
+    assert expected_message in captured.out
    
