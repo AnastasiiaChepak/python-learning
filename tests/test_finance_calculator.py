@@ -1,6 +1,10 @@
 import pytest
 import runpy
 
+@pytest.fixture
+def input_values(request):
+    return iter(request.param)
+
 from finance_calculator import calculate_remaining, get_positive_number
 from unittest.mock import Mock
 
@@ -21,25 +25,39 @@ def test_calculate_remaining(salary, expenses, expected):
     result = calculate_remaining(salary, expenses)
     assert result == expected
 
-def test_get_positive_number_invalid_input(monkeypatch, capsys):
-    inputs = iter(["abc", "100"])
-    monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+@pytest.mark.parametrize(
+    "input_values",
+    [["abc", "100"]],
+    indirect=True,
+)
+def test_get_positive_number_invalid_input(monkeypatch, capsys, input_values):
+    monkeypatch.setattr("builtins.input", lambda _: next(input_values))
+
     result = get_positive_number("Enter a number: ")
     captured = capsys.readouterr()
+
     assert "Please enter a valid number." in captured.out
     assert result == 100
 
-def test_get_positive_number_zero_input(monkeypatch, capsys):
-    inputs = iter(["0", "100"])
-    monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+@pytest.mark.parametrize(
+    "input_values",
+    [["0", "100"]],
+    indirect=True,
+)
+def test_get_positive_number_zero_input(monkeypatch, capsys, input_values):
+    monkeypatch.setattr("builtins.input", lambda _: next(input_values))
     result = get_positive_number("Enter a number: ")
     captured = capsys.readouterr()
     assert "Number must be greater than 0." in captured.out
     assert result == 100
 
-def test_get_positive_number_negative_input(monkeypatch, capsys):
-    inputs = iter(["-100", "100"])
-    monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+@pytest.mark.parametrize(
+    "input_values",
+    [["-100", "100"]],
+    indirect=True,
+)
+def test_get_positive_number_negative_input(monkeypatch, capsys, input_values):
+    monkeypatch.setattr("builtins.input", lambda _: next(input_values))
     result = get_positive_number("Enter a number: ")
     captured = capsys.readouterr()
     assert "Number must be greater than 0." in captured.out
